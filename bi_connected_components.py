@@ -243,8 +243,13 @@ for i in range(num_point):
 
 tree_graph = np.zeros((num_point, num_point), dtype=int)
 
+start_time = process_time_ns()
 tree = dfs_spanning_tree(nodes, graph, visited, tree_graph)
+time_usage = process_time_ns() - start_time
+
 print('\ntree_graph\n', tree_graph)
+
+print('\ntime_usage:{}\n'.format(time_usage))
 
 
 
@@ -311,3 +316,8 @@ print('\nsubnets:\n', subnets)
 print('\nedge_stack:\n', edge_stack)
 
 print('\ntime_usage:{}\n'.format(time_usage))
+
+
+
+
+
