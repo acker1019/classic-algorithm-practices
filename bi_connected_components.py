@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
-'''
-Algorithm of bi-connected components and articulation points detection in graph.
-'''
-
 import numpy as np
+from time import process_time_ns
 
 class NumberIterator:
   def __iter__(self, val=1):
@@ -270,7 +267,9 @@ edge_stack = []
 joints = []
 subnets = []
 
+start_time = process_time_ns()
 search_BiConnected(graph, 0, DFN, L, edge_stack, joints, subnets)
+time_usage = process_time_ns() - start_time
 
 joints = [v+1 for v in joints]
 subnets = [[(x+1, y+1) for x, y in subnet] for subnet in subnets]
@@ -280,6 +279,8 @@ print('\njoints:\n', joints)
 print('\nsubnets:\n', subnets)
 
 print('\nedge_stack:\n', edge_stack)
+
+print('\ntime_usage:{}\n'.format(time_usage))
 
 
 
@@ -291,7 +292,9 @@ edge_stack = []
 joints = []
 subnets = []
 
+start_time = process_time_ns()
 search_BiConnected_tree(tree, edge_stack, joints, subnets)
+time_usage = process_time_ns() - start_time
 
 DFN = np.zeros(num_point, dtype=int) # depth-first number
 L = np.zeros(num_point, dtype=int) # DFN(self -> offsprings -> oldest_ancestor)
@@ -306,3 +309,5 @@ print('\njoints:\n', joints)
 print('\nsubnets:\n', subnets)
 
 print('\nedge_stack:\n', edge_stack)
+
+print('\ntime_usage:{}\n'.format(time_usage))
