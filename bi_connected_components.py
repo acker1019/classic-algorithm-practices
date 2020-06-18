@@ -2,18 +2,35 @@
 
 import numpy as np
 from time import process_time_ns
+import random as rd
+
+
+'''
+Two versions of bi-connected components searching algorithm are implemented in the file,
+which are adjacency matrix and m-way tree with backtracking line.
+
+It also finds articulation points when searching.
+'''
 
 class NumberIterator:
-  def __iter__(self, val=1):
-    self.val = val
-    return self
+    '''
+    Generate number iterately.
+    Its object will be passed between recursive functions
+    '''
+    
+    def __iter__(self, val=1):
+        self.val = val
+        return self
 
-  def __next__(self):
-    v = self.val
-    self.val += 1
-    return v
+    def __next__(self):
+        v = self.val
+        self.val += 1
+        return v
 
 class Node():
+    '''
+    The node element of dfs-spanning-backtracking-tree
+    '''
     
     def __init__(self, parent=None, data=None):
         self.parent = parent
@@ -39,14 +56,22 @@ class Node():
 
 
 def dfs_spanning_tree(nodes, graph, visited, tree_graph):
+    '''
+    generate dfs-spanning backtracking tree from a given graph which is represented by adjacency matrix
+    '''
     root_id = 0
     root = nodes[root_id]
-    walk_toBuild(nodes, graph, visited, root, None, root_id, tree_graph)
+    num_giver = iter(NumberIterator())
+    walk_toBuild(nodes, graph, visited, root, None, root_id, tree_graph, num_giver)
     
     return root
     
 
-def walk_toBuild(nodes, graph, visited, node, parent_j, j, tree_graph):
+def walk_toBuild(nodes, graph, visited, node, parent_j, j, tree_graph, num_giver):
+    '''
+    The recursive part of dfs_spanning_tree()
+    '''
+    node.DFN = next(num_giver)
     visited[j] = 1
     edges = graph[j]
     for i in range(len(edges)):
@@ -61,12 +86,18 @@ def walk_toBuild(nodes, graph, visited, node, parent_j, j, tree_graph):
                 tree_graph[j][i] = 1
                 tree_graph[i][j] = 1
                 
-                walk_toBuild(nodes, graph, visited, child, j, i, tree_graph)
+                walk_toBuild(nodes, graph, visited, child, j, i, tree_graph, num_giver)
                 
             elif visited[i]==1 and parent_j!=i and i < j:
                 # build tree structure
-                ancestor = nodes[i]
-                node.backtrack.append(ancestor)
+                if nodes[i].DFN > node.DFN:
+                    offspring = nodes[i]
+                    ancestor = node
+                else:
+                    offspring = node
+                    ancestor = nodes[i]
+                    
+                offspring.backtrack.append(ancestor)
                 
                 # build tree graph
                 tree_graph[j][i] = -1
@@ -74,13 +105,30 @@ def walk_toBuild(nodes, graph, visited, node, parent_j, j, tree_graph):
 
 
 def draw(node, graph):
+    '''
+    Transform the generated dfs-spanning backtracking tree to check the correctness
+    '''
     for a in node.backtrack:
-        graph[node.data][a.data] = -1
-        graph[a.data][node.data] = -1
+        if graph[node.data][a.data] == 0:
+            graph[node.data][a.data] = -1
+        else:
+            graph[node.data][a.data] = 3
+            
+        if graph[a.data][node.data] == 0:
+            graph[a.data][node.data] = -1
+        else:
+            graph[a.data][node.data] = 3
     
     for c in node.children:
-        graph[node.data][c.data] = 1
-        graph[c.data][node.data] = 1
+        if graph[node.data][c.data] == 0:
+            graph[node.data][c.data] = 1
+        else:
+            graph[node.data][c.data] = 2
+            
+        if graph[c.data][node.data] == 0:
+            graph[c.data][node.data] = 1
+        else:
+            graph[c.data][node.data] = 2
 
         
         draw(c, graph)
@@ -88,6 +136,8 @@ def draw(node, graph):
 
 def search_BiConnected(graph, j, DFN, L, edge_stack, joints, subnets):
     '''
+    Version of adjacency matrix
+    
     If the root gets branches more than two, the root is an articulation point, because:
     
     DFS make the nodes concentrate at the left-bottom of the tree,
@@ -109,11 +159,11 @@ def search_BiConnected(graph, j, DFN, L, edge_stack, joints, subnets):
             subnet = []
             while len(edge_stack) > 0:
                 x, y = edge_stack.pop()
-                subnet.insert(0, (x, y))
+                subnet.append((x, y))
                 if (x==i and y==root_id) or (x==root_id and y==i):
                     break
             if len(subnet) > 0:
-                subnets.insert(0, subnet)
+                subnets.append(subnet)
     
     path_count = 0
     edges = graph[root_id]
@@ -122,35 +172,43 @@ def search_BiConnected(graph, j, DFN, L, edge_stack, joints, subnets):
             path_count += 1
     
     if path_count > 0:
-        joints.insert(0, root_id)
+        joints.append(root_id)
             
     
 
 def walk_toSearch(graph, j, src_j, DFN, L, num_giver, edge_stack, joints, subnets):
+    '''
+    Recursion part of search_BiConnected()
+    '''
     num = next(num_giver)
     DFN[j] = num
     L[j] = num
     edges = graph[j]
+    isArticulation = False
     for i, v in enumerate(edges):
-        if v == 1 and i != src_j:
-            if DFN[i] < DFN[j]:
+        if v == 1:
+            if DFN[i] < DFN[j] and i != src_j:
                 edge_stack.append((j, i))
             if DFN[i] == 0:
                 walk_toSearch(graph, i, j, DFN, L, num_giver, edge_stack, joints, subnets)
                 L[j] = min([L[j], L[i]])
                 
                 if L[i] >= DFN[j]:
-                    joints.insert(0, j)
+                    isArticulation = True
                     subnet = []
                     while len(edge_stack) > 0:
                         x, y = edge_stack.pop()
-                        subnet.insert(0, (x, y))
+                        subnet.append((x, y))
                         if (x==i and y==j) or (x==j and y==i):
                             break
-                    subnets.insert(0, subnet)
+                    subnets.append(subnet)
                 
             else:
-                L[j] = min([L[j], DFN[i]])
+                if i != src_j:
+                    L[j] = min([L[j], DFN[i]])
+                    
+    if isArticulation:
+        joints.append(j)
         
 
 def search_BiConnected_tree(root, edge_stack, joints, subnets):
@@ -158,49 +216,49 @@ def search_BiConnected_tree(root, edge_stack, joints, subnets):
     The version of depth-first-search backtracking tree
     '''
     
-    num_giver = iter(NumberIterator())
-    num = next(num_giver)
-    root.DFN = num
-    root.L = num
-    print(root)
+    root.L = root.DFN
     
     for child in root.children:
         edge_stack.append((root.data, child.data))
-        walk_toSearch_tree(child, num_giver, edge_stack, joints, subnets)
+        walk_toSearch_tree(child, edge_stack, joints, subnets)
         
         subnet = []
         while len(edge_stack) > 0:
             x, y = edge_stack.pop()
-            subnet.insert(0, (x, y))
+            subnet.append((x, y))
             if (x==child.data and y==root.data) or (x==root.data and y==child.data):
                 break
         if len(subnet) > 0:
-            subnets.insert(0, subnet)
+            subnets.append(subnet)
     
     if len(root.children) > 1:
-        joints.insert(0, root.data)
+        joints.append(root.data)
 
 
 
-def walk_toSearch_tree(node, num_giver, edge_stack, joints, subnets):
-    num = next(num_giver)
-    node.DFN = num
-    node.L = num
-    print(node)
+def walk_toSearch_tree(node, edge_stack, joints, subnets):
+    '''
+    Recursion part of search_BiConnected_tree()
+    '''
+    node.L = node.DFN
+    isArticulation = False
     for child in node.children:
         edge_stack.append((node.data, child.data))
-        walk_toSearch_tree(child, num_giver, edge_stack, joints, subnets)
+        walk_toSearch_tree(child, edge_stack, joints, subnets)
         node.L = min([node.L, child.L])
         
         if child.L >= node.DFN:
-            joints.insert(0, node.data)
+            isArticulation = True
             subnet = []
             while len(edge_stack) > 0:
                 x, y = edge_stack.pop()
-                subnet.insert(0, (x, y))
+                subnet.append((x, y))
                 if (x==child.data and y==node.data) or (x==node.data and y==child.data):
                     break
-            subnets.insert(0, subnet)
+            subnets.append(subnet)
+    
+    if isArticulation:
+        joints.append(node.data)
     
     for ancestor in node.backtrack:
         edge_stack.append((node.data, ancestor.data))
@@ -208,30 +266,95 @@ def walk_toSearch_tree(node, num_giver, edge_stack, joints, subnets):
         
 
 def walk_forValue_tree(node, DFN, L):
-    #print(node, node.data, node.DFN, node.L)
+    '''
+    Gethering the values from the tree nodes into arrays
+    '''
     DFN[node.data] = node.DFN
     L[node.data] = node.L
     for child in node.children:
         walk_forValue_tree(child, DFN, L)
 
 
+def genAdjacencyMatrix(node_size, edge_size_rate=0.2):
+    '''
+    Generate a adjacency matrix randomly
+    
+    node_size: number of node in the generated graph
+    edge_size_rate:
+        Value domain is [0.0, 1.0].
+        No edge is in the graph when 0.0.
+        If it's 1.0, a full connected graph will be generated.
+    '''
+    edge_domain_size = int(node_size * (node_size - 1) / 2)
+    edge_size = int(edge_domain_size * edge_size_rate)
+    matrix = np.zeros((node_size, node_size), dtype=int)
+
+    edge_scale = edge_domain_size - node_size + 1
+
+    distributor = np.zeros(edge_scale, dtype=int)
+    
+    
+    for i in range(edge_size):
+        pos = rd.randrange(0, edge_scale)
+        while distributor[pos] == 1:
+            pos = (pos + 1) % edge_scale
+        distributor[pos] = 1
+    
+    for j in range(node_size-1):
+        pos = 1 + j + rd.randrange(0, node_size - j - 1)
+        matrix[j][pos] = 1
+        matrix[pos][j] = 1
+
+    k = 0
+    for j in range(node_size-1):
+        for i in range(1 + j, node_size):
+            if matrix[j][i] == 0:
+                v = distributor[k] 
+                k += 1
+                matrix[j][i] = v
+                matrix[i][j] = v
+    
+    return matrix
+
+
+def readMatrix(fpath):
+    '''
+    read an exsisted matrix from file
+    '''
+    str_matrix = []
+    with open(fpath, 'r') as file:
+        for line in file:
+            str_matrix.append(line)
+    
+    matrix = [str_matrix[0][3:-2].split(' ')]
+    
+    for line in str_matrix[1:-1]:
+        matrix.append(line[2:-2].split(' '))
+    
+    matrix.append(str_matrix[-1][2:-2].split(' '))
+    
+    matrix = [[int(s) for s in line] for line in matrix]
+    
+    graph = np.array(matrix, dtype=int)
+    
+    return len(graph), graph
+
+
+
 ' generate graph'
-        
-num_point = 6   #input()
-num_edge = 6    #input()
 
-graph = np.zeros((num_point, num_point), dtype=int)
-visited = np.zeros(num_point, dtype=int)
 
-in_ = [(1, 2), (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5), (5, 6)]
+randgen = False # generate a graph randomly?
+if randgen:
+    num_point = 20
+    graph = genAdjacencyMatrix(
+        node_size=num_point,
+        edge_size_rate=0.03)
+else:
+    # read a graph from file
+    num_point, graph = readMatrix('matrix_in.txt')
 
-for a, b in in_:
-    a -= 1
-    b -= 1
-    graph[a][b] = 1
-    graph[b][a] = 1
-
-print('\ngraph:\n', graph)
+print('\ngraph: (It can be drawn in https://graphonline.ru/en/create_graph_by_matrix)\n', graph)
 
 
 
@@ -242,6 +365,7 @@ for i in range(num_point):
     nodes.append(Node(data=i))
 
 tree_graph = np.zeros((num_point, num_point), dtype=int)
+visited = np.zeros(num_point, dtype=int)
 
 start_time = process_time_ns()
 tree = dfs_spanning_tree(nodes, graph, visited, tree_graph)
@@ -258,6 +382,10 @@ print('\ntime_usage:{}\n'.format(time_usage))
 tree_draw_exam = np.zeros((num_point, num_point), dtype=int)
 draw(tree, tree_draw_exam)
 print('\ntree_draw_exam:\n', tree_draw_exam)
+
+print('\ntree built correctly? ', end='')
+if np.allclose(tree_graph, tree_draw_exam):
+    print( (tree_graph == tree_draw_exam).all() )
 
 
 
@@ -276,8 +404,6 @@ start_time = process_time_ns()
 search_BiConnected(graph, 0, DFN, L, edge_stack, joints, subnets)
 time_usage = process_time_ns() - start_time
 
-joints = [v+1 for v in joints]
-subnets = [[(x+1, y+1) for x, y in subnet] for subnet in subnets]
 print('\nDFN:\n', DFN)
 print('\nL:\n', L)
 print('\njoints:\n', joints)
@@ -305,8 +431,6 @@ DFN = np.zeros(num_point, dtype=int) # depth-first number
 L = np.zeros(num_point, dtype=int) # DFN(self -> offsprings -> oldest_ancestor)
 
 walk_forValue_tree(tree, DFN, L)
-joints = [v+1 for v in joints]
-subnets = [[(x+1, y+1) for x, y in subnet] for subnet in subnets]
 
 print('\nDFN:\n', DFN)
 print('\nL:\n', L)
