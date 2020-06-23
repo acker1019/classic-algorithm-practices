@@ -7,6 +7,11 @@ from bisect import bisect_left, bisect_right
 import numpy as np
 import json
 
+'''
+Merge randomly-generated buildings into a city skyline.
+Utilize the matplotlib to visualize the merging proccess.
+'''
+
 
 def randCity(n, building_area_limits=(0.02, 0.07), building_height_limits=(0.04, 0.6)):
     '''
